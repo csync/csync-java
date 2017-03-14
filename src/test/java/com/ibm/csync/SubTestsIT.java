@@ -22,6 +22,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.*;
@@ -60,7 +61,7 @@ public class SubTestsIT {
     public void testBasicListen() throws Exception{
         String uuid = UUID.randomUUID().toString();
         CompletableFuture<String> future = new CompletableFuture<>();
-        csync.listen(
+        Closeable listener = csync.listen(
                 Key.of("tests.java."+uuid+".*"),
                 data -> {
                     assertTrue(data.isDeleted == false);
@@ -72,6 +73,7 @@ public class SubTestsIT {
                 });
         csync.pub("tests.java."+uuid+".a","abc");
         assertTrue(future.get(20, TimeUnit.SECONDS).equals("pass"));
+        listener.close(); //close so we don't get events for teardown
         keysToCleanup.add("tests.java."+uuid+".*");
     }
 
@@ -80,7 +82,7 @@ public class SubTestsIT {
         String uuid = UUID.randomUUID().toString();
         CompletableFuture<String> futureOne = new CompletableFuture<>();
         CompletableFuture<String> futureTwo = new CompletableFuture<>();
-        csync.listen(
+        Closeable listenerOne = csync.listen(
                 Key.of("tests.java."+uuid+".*"),
                 data -> {
                     assertTrue(data.isDeleted == false);
@@ -91,7 +93,7 @@ public class SubTestsIT {
                     futureOne.complete("pass");
                 });
 
-        csync.listen(
+        Closeable listener = csync.listen(
                 Key.of("tests.java."+uuid+".a"),
                 data -> {
                     assertTrue(data.isDeleted == false);
@@ -105,6 +107,8 @@ public class SubTestsIT {
         csync.pub("tests.java."+uuid+".a","abc");
         assertTrue(futureOne.get(20, TimeUnit.SECONDS).equals("pass"));
         assertTrue(futureTwo.get(20, TimeUnit.SECONDS).equals("pass"));
+        listenerOne.close(); //close so we don't get events for teardown
+        listener.close();
         keysToCleanup.add("tests.java." + uuid + ".a");
     }
 

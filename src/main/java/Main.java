@@ -65,7 +65,7 @@ public class Main {
 			.onComplete(print("pub nice.key:hello"));
 
 		final CountDownLatch waitForThree = new CountDownLatch(3);
-		csync.del()
+
 		csync.blocking.pub("a","a",Timeout.of(10000));
 		final Closeable s1 = csync.listen(
 			Key.of("#"),
