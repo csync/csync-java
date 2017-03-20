@@ -22,6 +22,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -29,9 +30,6 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertTrue;
 
-/**
- * Created by thomasboop on 3/13/17.
- */
 public class AdvanceTestsIT {
 
     CSync csync;
@@ -67,17 +65,17 @@ public class AdvanceTestsIT {
         String uuid = UUID.randomUUID().toString();
 
 
-        CompletableFuture<String> future = new CompletableFuture<>();
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
         csync.blocking.pub("tests.java." + uuid + ".a",String.valueOf(0));
         csync.blocking.pub("tests.java." + uuid + ".a.b",String.valueOf(0));
         csync.blocking.pub("tests.java." + uuid + ".a.b.c",String.valueOf(0));
         csync.blocking.pub("tests.java." + uuid + ".a.b.c.d",String.valueOf(0));
-        csync.listen(
+        Closeable listener = csync.listen(
                 Key.of("tests.java."+uuid+".#"),
                 data -> {
                     totalCount++;
                     if (totalCount == 200){
-                        future.complete("pass");
+                        future.complete(true);
                     }
 
                     int value = Integer.parseInt(data.data);
@@ -85,7 +83,8 @@ public class AdvanceTestsIT {
                         csync.blocking.pub(data.key.string,String.valueOf(value+1));
                     }
                 });
-        assertTrue(future.get(30, TimeUnit.SECONDS).equals("pass"));
+        assertTrue(future.get(30, TimeUnit.SECONDS));
+        listener.close();
         keysToCleanup.add("tests.java." + uuid + ".a");
         keysToCleanup.add("tests.java." + uuid + ".a.b");
         keysToCleanup.add("tests.java." + uuid + ".a.b.c");

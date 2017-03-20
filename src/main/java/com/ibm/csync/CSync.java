@@ -121,7 +121,7 @@ public class CSync implements CSyncAPI {
 		private Builder() {}
 
 		public Builder defaultBlockingTimeout(final Timeout timeout) {
-			if (timeout == null) throw new IllegalArgumentException();
+			if (timeout == null || timeout.ms < 0) throw new IllegalArgumentException();
 			this.defaultBlockingTimeout = timeout;
 			return this;
 		}
