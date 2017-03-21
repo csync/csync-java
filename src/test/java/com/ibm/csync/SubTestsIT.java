@@ -134,4 +134,33 @@ public class SubTestsIT {
         keysToCleanup.add("tests.java." + uuid + ".a");
     }
 
+    @Test
+    public void testMultiplePubsInARow() throws Exception{
+        String uuid = UUID.randomUUID().toString();
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        CompletableFuture<Boolean> futureTwo = new CompletableFuture<>();
+        try{
+            csync.pub("tests.java."+uuid+".abc","test string data");
+            csync.pub("tests.java."+uuid+".def","test string data");
+        }
+        catch (Exception e){
+            fail("gave an exception when doing two pubs real fast");
+        }
+        Closeable listener = csync.listen(
+                Key.of("tests.java."+uuid+".*"),
+                data -> {
+                    assertTrue(data.isDeleted == false);
+                    assertTrue(data.data.equals("test string data"));
+                    assertTrue(data.vts>0);
+                    assertTrue(data.cts>0);
+                    if(data.key.string.equals("tests.java."+uuid+".abc"))
+                        future.complete(true);
+                    else if(data.key.string.equals("tests.java."+uuid+".def"))
+                        futureTwo.complete(true);
+                });
+        assertTrue(future.get());
+        assertTrue(futureTwo.get());
+        listener.close();
+    }
+
 }
