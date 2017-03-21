@@ -18,13 +18,7 @@
 
 package com.ibm.csync;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-
 import static org.junit.Assert.*;
 
 public class ConnectTestsIT {
@@ -46,24 +40,6 @@ public class ConnectTestsIT {
             fail("Test failed, unable to log in with demo token");
         }
     }
-
-   /* @Test
-    public void badProvider() throws Exception{
-        CompletableFuture<String> future = new CompletableFuture<>();
-        try {
-            final CSync csync = CSync.builder()
-                    .token("demoToken")
-                    .provider("demozzzzzzzz")
-                    .sessionId("xyz")
-                    .build();
-            csync.pub("a","b");
-
-        }
-        catch (Exception e){
-            future.complete("pass");
-        }
-        assertTrue(future.get(20, TimeUnit.SECONDS).equals("pass"));
-    }*/
 
     @Test
     public void badProvider() {
