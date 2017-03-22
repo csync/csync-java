@@ -56,7 +56,7 @@ public class Transport implements WebSocketListener {
 	private Promise<WebSocket> socketPromise = null;
 	private Futur<WebSocket> socketFutur = null;
 	private final Executor sendExec = Executors.newSingleThreadExecutor();
-
+	private WebSocket loginWebSocket = null; //Needs to be stored so that we callback when we are sure auth succeeded
 	// TODO: handle concurrency
 	//private final Set<Callback<WebSocket>> waitingForSocket = ConcurrentHashMap.newKeySet();
 	private final Map<Long, Promise<Envelope>> waitingForResponse = Collections.synchronizedMap(new WeakHashMap<>());
@@ -115,18 +115,16 @@ public class Transport implements WebSocketListener {
 
 	@Override
 	public synchronized void onOpen(WebSocket webSocket, Response response) {
-		final Promise<WebSocket> thePromise = socketPromise;
-		socketPromise = null;
-
-		if (thePromise == null) {
+		if (socketPromise == null) {
 			try {
 				webSocket.close(0,"not needed");
 			} catch (IOException e) {
 				tracer.onError(e, "onOpen");
 			}
-		} else {
-			thePromise.set(null, webSocket);
 		}
+		//set login websocket to callback if it isn't already set
+		if(loginWebSocket == null)
+			loginWebSocket = webSocket;
 	}
 
 	@Override
@@ -159,8 +157,24 @@ public class Transport implements WebSocketListener {
 				final Connect.Response r = gson.fromJson(env.payload, Connect.Response.class);
 				// TODO: check uuid
 				tracer.onConnect(r);
+
+				//Auth was successful and we are waiting on the callback, so send it
+				if(loginWebSocket != null ) {
+					final Promise<WebSocket> thePromise = socketPromise;
+					socketPromise = null;
+					thePromise.set(null, loginWebSocket);
+					loginWebSocket = null;
+				}
+
 			} else {
 				tracer.onError(new Exception(),"unknown kind %s",env);
+				//If we failed login and are waiting on a callback, send a failure.
+				if(loginWebSocket != null){
+					final Promise<WebSocket> thePromise = socketPromise;
+					socketPromise = null;
+					thePromise.set(new Exception("Auth failed"),loginWebSocket);
+					loginWebSocket = null;
+				}
 			}
 		}
 	}
@@ -175,9 +189,11 @@ public class Transport implements WebSocketListener {
 		final Promise<WebSocket> thePromise = socketPromise;
 		socketPromise = null;
 		socketFutur = null;
+		loginWebSocket = null;
 		if (thePromise != null) {
 			thePromise.set(new Exception(reason),null);
 		}
+
 	}
 
 }

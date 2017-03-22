@@ -19,6 +19,10 @@
 package com.ibm.csync;
 
 import org.junit.Test;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
 import static org.junit.Assert.*;
 
 public class ConnectTestsIT {
@@ -42,66 +46,86 @@ public class ConnectTestsIT {
     }
 
     @Test
-    public void badProvider() {
+    public void badProvider() throws Exception{
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
         try {
             final CSync csync = CSync.builder()
-                    .token("faketokendoesntwork")
-                    .provider("demozz")
+                    .token(System.getenv("CSYNC_DEMO_TOKEN"))
+                    .provider("thisisafakeprovider")
+                    .host(System.getenv("CSYNC_HOST"))
+                    .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                     .build();
 
             csync.blocking.pub("a","a");
-            fail("Test failed, was able to pub with a bad guest login");
+            fail("should have been able to do a blocking pub with a bad login");
 
         }
         catch (Exception e){
+            future.complete(true);
         }
+        assertTrue(future.get(10, TimeUnit.SECONDS));
     }
 
     @Test
-    public void badGuestLogin() {
+    public void badGuestLogin() throws Exception{
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
         try {
             final CSync csync = CSync.builder()
-                    .token("faketokendoesntwork")
-                    .provider("demo")
+                    .token("thistokenshouldfail")
+                    .provider(System.getenv("CSYNC_DEMO_PROVIDER"))
+                    .host(System.getenv("CSYNC_HOST"))
+                    .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                     .build();
 
             csync.blocking.pub("a","a");
-            fail("Test failed, was able to pub with a bad guest login");
+            fail("should have been able to do a blocking pub with a bad login");
 
         }
         catch (Exception e){
+            future.complete(true);
         }
+        assertTrue(future.get(10, TimeUnit.SECONDS));
     }
 
     @Test
-    public void badFacebookLogin() {
+    public void badFacebookLogin() throws Exception{
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
         try {
             final CSync csync = CSync.builder()
-                    .token("iamnotarealfacebooktoken")
+                    .token("thisisafaketoken")
                     .provider("facebook")
+                    .host(System.getenv("CSYNC_HOST"))
+                    .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                     .build();
 
             csync.blocking.pub("a","a");
-            fail("Test failed, was able to pub with a bad facebook token");
+            fail("should have been able to do a blocking pub with a bad login");
 
         }
         catch (Exception e){
+            future.complete(true);
         }
+        assertTrue(future.get(10, TimeUnit.SECONDS));
     }
 
     @Test
-    public void badGoogleLogin() {
+    public void badGoogleLogin() throws Exception{
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
         try {
             final CSync csync = CSync.builder()
-                    .token("iamnotarealgoogletoken")
+                    .token("thisisafaketoken")
                     .provider("google")
+                    .host(System.getenv("CSYNC_HOST"))
+                    .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                     .build();
 
             csync.blocking.pub("a","a");
-            fail("Test failed, was able to pub with a bad google token");
+            fail("should have been able to do a blocking pub with a bad login");
 
         }
         catch (Exception e){
+            future.complete(true);
         }
+        assertTrue(future.get(10, TimeUnit.SECONDS));
     }
 }
