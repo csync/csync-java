@@ -57,16 +57,6 @@ public class KeyTests {
 		nomatch("a.b","x.*");
 	}
 
-	//Test the max length of the key, this should fail.
-	@Test
-	public void testMaxLength(){
-		Key testKey = Key.of("a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z");
-		//comment back in when fixed
-		//assertTrue(testKey.string.equals(""));
-	}
-
-	//Tests that keys created two different ways are seen as equal
-	@Test
 	public void testInitializer(){
 		Key keyOne = Key.of("a","b","c");
 		Key keyTwo = Key.of("a.b.c");

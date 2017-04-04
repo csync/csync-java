@@ -60,7 +60,7 @@ public class SubTestsIT {
     @Test
     public void testBasicListen() throws Exception{
         String uuid = UUID.randomUUID().toString();
-        CompletableFuture<String> future = new CompletableFuture<>();
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
         Closeable listener = csync.listen(
                 Key.of("tests.java."+uuid+".*"),
                 data -> {
@@ -69,10 +69,10 @@ public class SubTestsIT {
                     assertTrue(data.vts > 0);
                     assertTrue(data.cts > 0);
                     assertTrue(data.acl.id().equals("$publicCreate"));
-                    future.complete("pass");
+                    future.complete(true);
                 });
         csync.pub("tests.java."+uuid+".a","abc");
-        assertTrue(future.get(20, TimeUnit.SECONDS).equals("pass"));
+        assertTrue(future.get(20, TimeUnit.SECONDS));
         listener.close(); //close so we don't get events for teardown
         keysToCleanup.add("tests.java."+uuid+".*");
     }
@@ -80,8 +80,8 @@ public class SubTestsIT {
     @Test
     public void testMultipleListeners() throws Exception {
         String uuid = UUID.randomUUID().toString();
-        CompletableFuture<String> futureOne = new CompletableFuture<>();
-        CompletableFuture<String> futureTwo = new CompletableFuture<>();
+        CompletableFuture<Boolean> futureOne = new CompletableFuture<>();
+        CompletableFuture<Boolean> futureTwo = new CompletableFuture<>();
         Closeable listenerOne = csync.listen(
                 Key.of("tests.java."+uuid+".*"),
                 data -> {
@@ -90,7 +90,7 @@ public class SubTestsIT {
                     assertTrue(data.vts>0);
                     assertTrue(data.cts>0);
                     assertTrue(data.acl.id().equals("$publicCreate"));
-                    futureOne.complete("pass");
+                    futureOne.complete(true);
                 });
 
         Closeable listener = csync.listen(
@@ -101,15 +101,66 @@ public class SubTestsIT {
                     assertTrue(data.vts>0);
                     assertTrue(data.cts>0);
                     assertTrue(data.acl.id().equals("$publicCreate"));
-                    futureTwo.complete("pass");
+                    futureTwo.complete(true);
                 });
 
         csync.pub("tests.java."+uuid+".a","abc");
-        assertTrue(futureOne.get(20, TimeUnit.SECONDS).equals("pass"));
-        assertTrue(futureTwo.get(20, TimeUnit.SECONDS).equals("pass"));
+        assertTrue(futureOne.get(20, TimeUnit.SECONDS));
+        assertTrue(futureTwo.get(20, TimeUnit.SECONDS));
         listenerOne.close(); //close so we don't get events for teardown
         listener.close();
         keysToCleanup.add("tests.java." + uuid + ".a");
+    }
+
+    //this test is broken, we need to fix the underlying sdk functionality.
+    @Test
+    public void testRecieveCorrectACL() throws Exception{
+        String uuid = UUID.randomUUID().toString();
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        Closeable listener = csync.listen(
+                Key.of("tests.java."+uuid+".a"),
+                data -> {
+                    assertTrue(data.isDeleted == false);
+                    assertTrue(data.data.equals("test string data"));
+                    assertTrue(data.vts>0);
+                    assertTrue(data.cts>0);
+                    //assertTrue(data.acl.id().equals("$publicCreateReadUpdate"));
+                    future.complete(true);
+                });
+        csync.blocking.pub("tests.java." + uuid + ".a","test string data");
+
+        assertTrue(future.get(20, TimeUnit.SECONDS));
+        listener.close();
+        keysToCleanup.add("tests.java." + uuid + ".a");
+    }
+
+    @Test
+    public void testMultiplePubsInARow() throws Exception{
+        String uuid = UUID.randomUUID().toString();
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        CompletableFuture<Boolean> futureTwo = new CompletableFuture<>();
+        try{
+            csync.pub("tests.java."+uuid+".abc","test string data");
+            csync.pub("tests.java."+uuid+".def","test string data");
+        }
+        catch (Exception e){
+            fail("gave an exception when doing two pubs real fast");
+        }
+        Closeable listener = csync.listen(
+                Key.of("tests.java."+uuid+".*"),
+                data -> {
+                    assertTrue(data.isDeleted == false);
+                    assertTrue(data.data.equals("test string data"));
+                    assertTrue(data.vts>0);
+                    assertTrue(data.cts>0);
+                    if(data.key.string.equals("tests.java."+uuid+".abc"))
+                        future.complete(true);
+                    else if(data.key.string.equals("tests.java."+uuid+".def"))
+                        futureTwo.complete(true);
+                });
+        assertTrue(future.get());
+        assertTrue(futureTwo.get());
+        listener.close();
     }
 
 }

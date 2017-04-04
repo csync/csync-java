@@ -73,19 +73,18 @@ public class PubTestsIT {
     @Test
     public void testSimpleNonBlockingPub() throws Exception {
         String uuid = UUID.randomUUID().toString();
-        CompletableFuture<String> future = new CompletableFuture<>();
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
         try {
             csync.pub("tests.java."+uuid+".a.b.c","abc", (error, vts) -> {
                     if (error == null && vts > 0)
-                        future.complete("pass");
+                        future.complete(true);
                 }
             );
         }
         catch (Exception e) {
             fail("Failed to send a nonblocking pub");
         }
-        String pass = future.get(10,TimeUnit.SECONDS);
-        assertTrue(pass.equals("pass"));
+        assertTrue(future.get(10,TimeUnit.SECONDS));
         keysToCleanup.add("tests.java."+uuid+".a.b.c");
     }
 
@@ -102,5 +101,17 @@ public class PubTestsIT {
         keysToCleanup.add("tests.java."+uuid+".c.c");
         keysToCleanup.add("tests.java."+uuid+".e.e");
 
+    }
+
+    @Test
+    public void testPubWithTooManyParts() throws Exception{
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        try {
+            csync.blocking.pub("tests.java.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z", "a");
+        }
+        catch (Exception e){
+            future.complete(true);
+        }
+        assertTrue(future.get(10,TimeUnit.SECONDS));
     }
 }
