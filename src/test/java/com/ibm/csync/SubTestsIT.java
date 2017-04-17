@@ -24,6 +24,8 @@ import org.junit.Test;
 
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.*;
 
@@ -161,6 +163,79 @@ public class SubTestsIT {
         assertTrue(future.get());
         assertTrue(futureTwo.get());
         listener.close();
+    }
+
+    @Test
+    public void testMultipleListens() throws Exception{
+        String uuid = UUID.randomUUID().toString();
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        CompletableFuture<Boolean> futureTwo = new CompletableFuture<>();
+        try{
+            csync.pub("tests.java."+uuid+".abc","test string data");
+        }
+        catch (Exception e){
+            fail("gave an exception when doing two pubs real fast");
+        }
+        Closeable listener = csync.listen(
+                Key.of("tests.java."+uuid+".abc"),
+                data -> {
+                    assertTrue(data.isDeleted == false);
+                    assertTrue(data.data.equals("test string data"));
+                    assertTrue(data.vts>0);
+                    assertTrue(data.cts>0);
+                    if(data.key.string.equals("tests.java."+uuid+".abc"))
+                        future.complete(true);
+                });
+        assertTrue(future.get());
+        listener.close();
+        Closeable listenerTwo = csync.listen(
+                Key.of("tests.java."+uuid+".abc"),
+                data -> {
+                    assertTrue(data.isDeleted == false);
+                    assertTrue(data.data.equals("test string data"));
+                    assertTrue(data.vts>0);
+                    assertTrue(data.cts>0);
+                    if(data.key.string.equals("tests.java."+uuid+".abc"))
+                        futureTwo.complete(true);
+                });
+        assertTrue(futureTwo.get());
+        listenerTwo.close();
+    }
+
+    @Test
+    public void testNotServeDelete() throws Exception{
+        String uuid = UUID.randomUUID().toString();
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        CompletableFuture<Boolean> futureTwo = new CompletableFuture<>();
+        try{
+            csync.pub("tests.java."+uuid+".abc","test string data");
+            csync.del("tests.java."+uuid+".abc");
+        }
+        catch (Exception e){
+            fail("gave an exception when doing two pubs real fast");
+        }
+        Closeable listener = csync.listen(
+                Key.of("tests.java."+uuid+".abc"),
+                data -> {
+                    if(data.isDeleted == true)
+                        future.complete(true);
+                });
+        assertTrue(future.get());
+        listener.close();
+        Closeable listenerTwo = csync.listen(
+                Key.of("tests.java."+uuid+".abc"),
+                data -> {
+                    //Should never be able to get here, on deletes if should not send the item from teh local db
+                    fail("Should not have received a delete from the db on a listen");
+                });
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                futureTwo.complete(true);
+            }
+        }, 2000);
+        assertTrue(futureTwo.get());
+        listenerTwo.close();
     }
 
 }
