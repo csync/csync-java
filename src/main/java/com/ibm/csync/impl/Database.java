@@ -250,15 +250,18 @@ class Database {
 						n++;
 						count++;
 						maxVts = rs.getLong(7);
-						subscription.call(Value.of(
-							Key.of(rs.getString(1)),
-							rs.getString(2),
-							rs.getBoolean(3),
-							rs.getString(4),
-							rs.getString(5),
-							rs.getLong(6),
-							maxVts
-						));
+						//Only return values from the local database if they are not deletes.
+						if (rs.getBoolean(3) == false) {
+							subscription.call(Value.of(
+									Key.of(rs.getString(1)),
+									rs.getString(2),
+									rs.getBoolean(3),
+									rs.getString(4),
+									rs.getString(5),
+									rs.getLong(6),
+									maxVts
+							));
+						}
 					}
 					if (n != GET_LIMIT) return count;
 				}
