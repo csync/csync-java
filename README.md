@@ -78,7 +78,7 @@ Maven:
 <dependency>
         <groupId>com.ibm.csync</groupId>
         <artifactId>csync-java</artifactId>
-        <version>1.3</version>
+        <version>1.4.0</version>
 </dependency>
 ```
 Gradle:
