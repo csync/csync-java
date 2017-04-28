@@ -83,7 +83,7 @@ Maven:
 ```
 Gradle:
 ```
-compile 'com.ibm.csync:csync-java:1.3'
+compile 'com.ibm.csync:csync-java:1.4.0'
 ```
 
 #Usage
