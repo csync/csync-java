@@ -19,9 +19,15 @@
 package com.ibm.csync;
 
 import com.ibm.csync.functional.Futur;
+import okhttp3.ws.WebSocket;
+
+import java.io.IOError;
+import java.io.IOException;
 
 interface CSyncAPI {
 
+	Futur<Boolean> authenticate(String provider, String token);
+	Futur<Boolean> unauthenticate();
 	Futur<Long> pub(Key key, String data, Acl acl, Deadline dl);
 	Futur<Long> del(final Key key, final Deadline dl);
 	Timeout defaultTimeout();
