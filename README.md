@@ -95,12 +95,25 @@ Applications use the CSync class to create a connection to a specific CSync serv
 final CSync csync = new CSync.builder()
     .host("localhost")
     .port(6005)
-    .provider("demo")
-    .token("demoToken")
     .build();
 ```
 
-Note: Update the `host` and `port` to your specific csync server instance. Also, `provider` and `token` can be updated to allow other providers to authenticate the csync session.
+Note: Update the `host` and `port` to your specific csync server instance.
+
+## Authenticating
+```
+csync.authenticate("demo", "demoToken")
+    .onComplete((exception, didSucceed) -> {
+        if(didSucceed) {
+            //We successfully logged in
+        }
+        else {
+            ex.printStackTrace()
+        }
+    });
+```
+
+Note: The provider and token can be updated to allow other providers to authenticate the csync session.
 
 ## Listening to values on a key
 ```

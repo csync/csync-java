@@ -35,13 +35,22 @@ public class PubTestsIT {
 
     @Before
     public void setup() throws Exception{
-        int x = 50;
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
         csync = CSync.builder()
-                .token(System.getenv("CSYNC_DEMO_TOKEN"))
-                .provider(System.getenv("CSYNC_DEMO_PROVIDER"))
                 .host(System.getenv("CSYNC_HOST"))
                 .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                 .build();
+        csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"))
+                .onComplete((ex, isSuccessful) -> {
+                    if(ex == null) {
+                        future.complete(true);
+                    }
+                    else {
+                        fail("Unable to authenticate with the given credentials");
+                    }
+                });
+
+        future.get(10, TimeUnit.SECONDS);
     }
 
     @After

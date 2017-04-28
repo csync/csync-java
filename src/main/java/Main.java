@@ -42,9 +42,8 @@ public class Main {
 
 
 		final CSync csync = CSync.builder()
-			.token("demoToken")
-			.provider("demo")
 			.build();
+		csync.authenticate("demo", "demoToken");
 
 		csync.pub("something", "hello", Acls.Private)
 			.then(() -> csync.pub("something", "hello again", Acls.PublicRead))

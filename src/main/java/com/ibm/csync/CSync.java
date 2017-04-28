@@ -22,8 +22,10 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.ibm.csync.functional.Futur;
 import com.ibm.csync.impl.CSyncImpl;
 import com.ibm.csync.impl.commands.Pub;
+import okhttp3.ws.WebSocket;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -69,9 +71,17 @@ public class CSync implements CSyncAPI {
 
 
 
+	// Auth
+	
+	@Override
+	public Futur<Boolean> authenticate(String provider, String token) {
+		return impl.ws.startSession(provider, token);
+	}
 
-
-
+	@Override
+	public Futur<Boolean> unauthenticate() {
+		return impl.ws.endSession();
+	}
 
 	// Blocking
 
@@ -172,16 +182,6 @@ public class CSync implements CSyncAPI {
 
 		public Builder path(final String path) {
 			this.path = path;
-			return this;
-		}
-
-		public Builder provider(final String provider){
-			args.put("authProvider",provider);
-			return this;
-		}
-
-		public Builder token(final String token) {
-			args.put("token",token);
 			return this;
 		}
 

@@ -38,6 +38,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -55,6 +57,7 @@ public class Transport implements WebSocketListener {
 
 	private Promise<WebSocket> socketPromise = null;
 	private Futur<WebSocket> socketFutur = null;
+	private Promise<Boolean> finshedClosing = null;
 	private final Executor sendExec = Executors.newSingleThreadExecutor();
 	private WebSocket loginWebSocket = null; //Needs to be stored so that we callback when we are sure auth succeeded
 	// TODO: handle concurrency
@@ -63,11 +66,10 @@ public class Transport implements WebSocketListener {
 
 	private final Tracer tracer;
 
-	//private final String url;
 	private final Database db;
 	private final ScheduledExecutorService workers;
 
-	private final Request req;
+	private Request req;
 	private final OkHttpClient client;
 
 	Transport(final String url, final Database db, final ScheduledExecutorService workers, final Tracer tracer) {
@@ -77,9 +79,9 @@ public class Transport implements WebSocketListener {
 		this.tracer = tracer;
 
 		req = new Request.Builder()
-			.get()
-			.url(url)
-			.build();
+				.get()
+				.url(url)
+				.build();
 
 		client = new OkHttpClient.Builder()
 			.readTimeout(60, TimeUnit.SECONDS)
@@ -87,7 +89,54 @@ public class Transport implements WebSocketListener {
 
 	}
 
-	private synchronized Futur<WebSocket> connect() {
+	public synchronized Futur<Boolean> startSession(String provider, String token) {
+		String authURL = this.req.url().toString() + encodeAuthParameters(provider, token);
+		Promise<Boolean> sessionPromise = new Promise<>();
+		if(socketFutur != null) {
+			// Already logged in
+			logger.warn("Start session called while the session is already active");
+			sessionPromise.set(null, true);
+		}
+		else {
+			connect(authURL)
+					.onComplete(workers, (ex, ws) -> {
+								if (ex != null) {
+									sessionPromise.set(ex,false);
+								}
+								else {
+									sessionPromise.set(null,true);
+								}
+							}
+
+					);
+		}
+		return sessionPromise.futur;
+	}
+
+	public synchronized Futur<Boolean> endSession() {
+		if(socketFutur == null) {
+			// Already logged out
+			logger.warn("End session called while the session is already not active");
+			Promise<Boolean> willLogout = new Promise<>();
+			Futur<Boolean>  logoutSuccess = willLogout.futur;
+			willLogout.set(null, true);
+			return logoutSuccess;
+		}
+		else {
+			if(finshedClosing != null) {
+				return finshedClosing.futur;
+			}
+			finshedClosing = new Promise<>();
+			socketFutur.consume(ws -> ws.close(1000,"session ended"));
+			return finshedClosing.futur;
+		}
+	}
+
+	private synchronized Futur<WebSocket> connect(String url) {
+		Request req = new Request.Builder()
+				.get()
+				.url(url)
+				.build();
 		if (socketFutur == null) {
 			socketPromise = new Promise<>(workers);
 			socketFutur = socketPromise.futur;
@@ -96,7 +145,22 @@ public class Transport implements WebSocketListener {
 		return socketFutur;
 	}
 
+	private String encodeAuthParameters(String provider, String token) {
+		try {
+			return "&authProvider=" + URLEncoder.encode(provider,"UTF-8")
+					+ "&token=" + URLEncoder.encode(token,"UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 	public synchronized  <T> Futur<T> rpc(final String kind, final Object request, Class<T> cls, final Deadline dl) {
+		if(socketFutur == null) {
+			// Unauthenticated
+			Promise<T> failedPromise = new Promise<>();
+			failedPromise.set(new Exception("Unauthorized"), null);
+			return failedPromise.futur;
+		}
 		final Envelope requestEnv = new Envelope(kind, gson.toJsonTree(request));
 		final Long closure = requestEnv.closure;
 		final String outgoing = gson.toJson(requestEnv);
@@ -105,7 +169,7 @@ public class Transport implements WebSocketListener {
 		final Promise<Envelope> responseEnvelopePromise = new Promise<>(workers);
 		waitingForResponse.put(closure, responseEnvelopePromise);
 
-		return connect()
+		return socketFutur
 			.consume(sendExec,ws -> ws.sendMessage(RequestBody.create(WebSocket.TEXT, outgoing)))
 			.then(() -> responseEnvelopePromise.futur)
 			.map(env -> gson.fromJson(env.payload,cls))
@@ -193,7 +257,8 @@ public class Transport implements WebSocketListener {
 		if (thePromise != null) {
 			thePromise.set(new Exception(reason),null);
 		}
-
+		if (finshedClosing != null) {
+			finshedClosing.set(null, true);
+		}
 	}
-
 }
