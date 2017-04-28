@@ -72,18 +72,19 @@ The ACL for a key is set when the key is created by the first write performed to
 # Getting Started
 
 Adding the java SDK to your java project:
-
-1. Build the csync-java SDK either in an IDE or from the command line using the command `gradle build`. This will generate the CSync .jar file in your `build/libs` directory.
-2. From your java project, navigate to `File -> Project Structure` as shown in the screenshot below: 
-
-<img src="images/projectStructure.png" width="300">
-  
-3. Click on `Libraries` 
-4. Click the `+` sign and select `Java`
-5. Navigate to the directory that contains the jar file for CSync.
-
-Note: if you are using a gradle project, add the CSync SDK as a dependency in your `build.gradle` file like this:
-`compile files('/Users/narinecholakyan/Documents/csync-java/build/libs/csync-1.0-SNAPSHOT.jar')`
+    
+Maven:
+```
+<dependency>
+        <groupId>com.ibm.csync</groupId>
+        <artifactId>csync-java</artifactId>
+        <version>1.4.0</version>
+</dependency>
+```
+Gradle:
+```
+compile 'com.ibm.csync:csync-java:1.4.0'
+```
 
 #Usage
 
