@@ -20,8 +20,10 @@ package com.ibm.csync.impl.commands;
 
 import com.ibm.csync.Deadline;
 import com.ibm.csync.Key;
-import com.ibm.csync.functional.Futur;
+import com.ibm.csync.ServerException;
 import com.ibm.csync.impl.CSyncImpl;
+
+import java.util.concurrent.CompletableFuture;
 
 public class Unsub {
 	public static class Request {
@@ -32,10 +34,14 @@ public class Unsub {
 		}
 	}
 
-	public static Futur<Boolean> send(final CSyncImpl impl, final Key key, final Deadline dl)  {
+	public static CompletableFuture<Boolean> send(final CSyncImpl impl, final Key key, final Deadline dl)  {
 		return impl.ws.rpc("unsub",new Request(key.array),Happy.Response.class, dl)
-			.map(h -> {
-				h.check();
+			.thenApply(h -> {
+				try {
+					h.check();
+				} catch (ServerException e) {
+					throw new RuntimeException(e);
+				}
 				return true;
 			});
 	}

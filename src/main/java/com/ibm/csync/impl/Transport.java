@@ -21,8 +21,6 @@ package com.ibm.csync.impl;
 import com.ibm.csync.Deadline;
 import com.ibm.csync.Tracer;
 import com.ibm.csync.Value;
-import com.ibm.csync.functional.Futur;
-import com.ibm.csync.functional.Promise;
 import com.ibm.csync.impl.commands.Connect;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -40,13 +38,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 
 import static com.ibm.csync.impl.CSyncImpl.gson;
@@ -55,14 +51,13 @@ public class Transport implements WebSocketListener {
 
 	private final static Logger logger = LoggerFactory.getLogger(Transport.class);
 
-	private Promise<WebSocket> socketPromise = null;
-	private Futur<WebSocket> socketFutur = null;
-	private Promise<Boolean> finshedClosing = null;
+	private CompletableFuture<WebSocket> socketFuture = null;
+	private CompletableFuture<Boolean> finshedClosing = null;
 	private final Executor sendExec = Executors.newSingleThreadExecutor();
 	private WebSocket loginWebSocket = null; //Needs to be stored so that we callback when we are sure auth succeeded
 	// TODO: handle concurrency
 	//private final Set<Callback<WebSocket>> waitingForSocket = ConcurrentHashMap.newKeySet();
-	private final Map<Long, Promise<Envelope>> waitingForResponse = Collections.synchronizedMap(new WeakHashMap<>());
+	private final Map<Long, CompletableFuture<Envelope>> waitingForResponse = Collections.synchronizedMap(new WeakHashMap<>());
 
 	private final Tracer tracer;
 
@@ -89,60 +84,66 @@ public class Transport implements WebSocketListener {
 
 	}
 
-	public synchronized Futur<Boolean> startSession(String provider, String token) {
+	public synchronized CompletableFuture<Boolean> startSession(String provider, String token) {
 		String authURL = this.req.url().toString() + encodeAuthParameters(provider, token);
-		Promise<Boolean> sessionPromise = new Promise<>();
-		if(socketFutur != null) {
+		CompletableFuture<Boolean>  sessionPromise = new CompletableFuture<>();
+		if(socketFuture != null) {
 			// Already logged in
 			logger.warn("Start session called while the session is already active");
-			sessionPromise.set(null, true);
+			sessionPromise.complete(true);
 		}
 		else {
 			connect(authURL)
-					.onComplete(workers, (ex, ws) -> {
+					.whenCompleteAsync((ws, ex) -> {
 								if (ex != null) {
-									sessionPromise.set(ex,false);
+									sessionPromise.completeExceptionally(ex);
 								}
 								else {
-									sessionPromise.set(null,true);
+									sessionPromise.complete(true);
 								}
 							}
+						, workers
 
 					);
 		}
-		return sessionPromise.futur;
+		return sessionPromise;
 	}
 
-	public synchronized Futur<Boolean> endSession() {
-		if(socketFutur == null) {
+	public synchronized CompletableFuture<Boolean> endSession() {
+		if(socketFuture == null) {
 			// Already logged out
 			logger.warn("End session called while the session is already not active");
-			Promise<Boolean> willLogout = new Promise<>();
-			Futur<Boolean>  logoutSuccess = willLogout.futur;
-			willLogout.set(null, true);
-			return logoutSuccess;
+			return CompletableFuture.completedFuture(true);
 		}
 		else {
 			if(finshedClosing != null) {
-				return finshedClosing.futur;
+				return finshedClosing;
 			}
-			finshedClosing = new Promise<>();
-			socketFutur.consume(ws -> ws.close(1000,"session ended"));
-			return finshedClosing.futur;
+			finshedClosing = new CompletableFuture<>();
+			socketFuture.whenComplete((ws, ex) -> {
+				if(ex != null) {
+					throw new RuntimeException(ex);
+				}
+				try {
+					ws.close(1000, "session ended");
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			});
+			return finshedClosing;
 		}
 	}
 
-	private synchronized Futur<WebSocket> connect(String url) {
+	private synchronized CompletableFuture<WebSocket> connect(String url) {
 		Request req = new Request.Builder()
 				.get()
 				.url(url)
 				.build();
-		if (socketFutur == null) {
-			socketPromise = new Promise<>(workers);
-			socketFutur = socketPromise.futur;
+		if (socketFuture == null) {
+			socketFuture = new CompletableFuture<>();
 			WebSocketCall.create(client, req).enqueue(this);
 		}
-		return socketFutur;
+		return socketFuture;
 	}
 
 	private String encodeAuthParameters(String provider, String token) {
@@ -154,32 +155,44 @@ public class Transport implements WebSocketListener {
 		}
 	}
 
-	public synchronized  <T> Futur<T> rpc(final String kind, final Object request, Class<T> cls, final Deadline dl) {
-		if(socketFutur == null) {
+	public synchronized  <T> CompletableFuture<T> rpc(final String kind, final Object request, Class<T> cls, final Deadline dl) {
+		if(socketFuture == null) {
 			// Unauthenticated
-			Promise<T> failedPromise = new Promise<>();
-			failedPromise.set(new Exception("Unauthorized"), null);
-			return failedPromise.futur;
+			CompletableFuture<T> failedPromise = new CompletableFuture<>();
+			failedPromise.completeExceptionally(new Exception("Unauthorized"));
+			return failedPromise;
 		}
 		final Envelope requestEnv = new Envelope(kind, gson.toJsonTree(request));
 		final Long closure = requestEnv.closure;
 		final String outgoing = gson.toJson(requestEnv);
 		logger.debug("outgoing {}", outgoing);
 
-		final Promise<Envelope> responseEnvelopePromise = new Promise<>(workers);
+		final CompletableFuture<Envelope> responseEnvelopePromise = new CompletableFuture<>();
 		waitingForResponse.put(closure, responseEnvelopePromise);
 
-		return socketFutur
-			.consume(sendExec,ws -> ws.sendMessage(RequestBody.create(WebSocket.TEXT, outgoing)))
-			.then(() -> responseEnvelopePromise.futur)
-			.map(env -> gson.fromJson(env.payload,cls))
-			.deadline(workers,dl)
-			.onComplete(workers,(e,res) -> waitingForResponse.remove(closure));
+		return socketFuture
+			.thenApplyAsync(ws -> {
+				try {
+					ws.sendMessage(RequestBody.create(WebSocket.TEXT, outgoing));
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+				return ws;
+			}, sendExec)
+			.thenApplyAsync((ws) -> {
+				try {
+					return responseEnvelopePromise.get(dl.ms, TimeUnit.MILLISECONDS);
+				} catch (Exception e) {
+					throw new RuntimeException(e);
+				}
+			}, workers)
+			.thenApplyAsync(env -> gson.fromJson(env.payload,cls), workers)
+			.whenCompleteAsync((e,res) -> waitingForResponse.remove(closure), workers);
 	}
 
 	@Override
 	public synchronized void onOpen(WebSocket webSocket, Response response) {
-		if (socketPromise == null) {
+		if (socketFuture == null) {
 			try {
 				webSocket.close(0,"not needed");
 			} catch (IOException e) {
@@ -193,13 +206,12 @@ public class Transport implements WebSocketListener {
 
 	@Override
 	public synchronized void onFailure(IOException e, Response response) {
-		final Promise<WebSocket> thePromise = socketPromise;
-		socketPromise = null;
-		socketFutur = null;
+		final CompletableFuture<WebSocket> theFuture = socketFuture;
+		socketFuture = null;
 
 		tracer.onError(e,"web socket connection failure %s",response);
 
-		Promise.set(thePromise,e,null);
+		theFuture.completeExceptionally(e);
 	}
 
 	@Override
@@ -213,10 +225,15 @@ public class Transport implements WebSocketListener {
 			final Envelope env = gson.fromJson(message.string(), Envelope.class);
 			//logger.info("{}",env);
 			if (env.closure != null) {
-				Promise.set(waitingForResponse.remove(env.closure),null,env);
+				waitingForResponse.remove(env.closure).complete(env);
 			} else if ("data".equals(env.kind)) {
-				Futur.of(workers, () -> db.set(Value.of(env)))
-					.onError(e -> tracer.onError(e,"set"));
+				CompletableFuture.runAsync(() -> {
+					try {
+						db.set(Value.of(env));
+					} catch (SQLException e) {
+						tracer.onError(e,"set");
+					}
+				}, workers);
 			} else if ("connectResponse".equals(env.kind)) {
 				final Connect.Response r = gson.fromJson(env.payload, Connect.Response.class);
 				// TODO: check uuid
@@ -224,9 +241,7 @@ public class Transport implements WebSocketListener {
 
 				//Auth was successful and we are waiting on the callback, so send it
 				if(loginWebSocket != null ) {
-					final Promise<WebSocket> thePromise = socketPromise;
-					socketPromise = null;
-					thePromise.set(null, loginWebSocket);
+					socketFuture.complete(loginWebSocket);
 					loginWebSocket = null;
 				}
 
@@ -234,9 +249,9 @@ public class Transport implements WebSocketListener {
 				tracer.onError(new Exception(),"unknown kind %s",env);
 				//If we failed login and are waiting on a callback, send a failure.
 				if(loginWebSocket != null){
-					final Promise<WebSocket> thePromise = socketPromise;
-					socketPromise = null;
-					thePromise.set(new Exception("Auth failed"),loginWebSocket);
+					final CompletableFuture<WebSocket> theFuture = socketFuture;
+					socketFuture = null;
+					theFuture.completeExceptionally(new Exception("Auth failed"));
 					loginWebSocket = null;
 				}
 			}
@@ -250,15 +265,14 @@ public class Transport implements WebSocketListener {
 
 	@Override
 	public synchronized void onClose(int code, String reason) {
-		final Promise<WebSocket> thePromise = socketPromise;
-		socketPromise = null;
-		socketFutur = null;
+		final CompletableFuture<WebSocket> theFuture = socketFuture;
+		socketFuture = null;
 		loginWebSocket = null;
-		if (thePromise != null) {
-			thePromise.set(new Exception(reason),null);
+		if (theFuture != null) {
+			theFuture.completeExceptionally(new Exception(reason));
 		}
 		if (finshedClosing != null) {
-			finshedClosing.set(null, true);
+			finshedClosing.complete(true);
 		}
 	}
 }

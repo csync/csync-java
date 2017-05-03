@@ -36,10 +36,10 @@ public class ConnectTestsIT {
                 .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                 .build();
         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"))
-                .onComplete((ex, isSuccessful) -> {
+                .whenComplete((isSuccessful, ex) -> {
                     if(isSuccessful) {
                         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"))
-                                .onComplete((ex2, isSuccessful2) -> {
+                                .whenComplete((isSuccessful2, ex2) -> {
                                     if(isSuccessful2) {
                                         future.complete(true);
                                     }
@@ -63,7 +63,7 @@ public class ConnectTestsIT {
                 .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                 .build();
         csync.unauthenticate()
-                .onComplete((ex, isSuccessful) -> {
+                .whenComplete((isSuccessful, ex) -> {
                     if(isSuccessful) {
                         future.complete(true);
                     }
@@ -82,13 +82,13 @@ public class ConnectTestsIT {
                 .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                 .build();
         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"))
-                .onComplete((ex, isSuccessful) -> {
+                .whenComplete((isSuccessful, ex) -> {
                     if(isSuccessful) {
                         csync.unauthenticate()
-                            .onComplete((ex2, isSuccessful2) -> {
+                            .whenComplete((isSuccessful2, ex2) -> {
                                 if(isSuccessful2) {
                                     csync.unauthenticate()
-                                        .onComplete((ex3, isSuccessful3) -> {
+                                        .whenComplete((isSuccessful3, ex3) -> {
                                             if(isSuccessful3) {
                                                 future.complete(true);
                                             }
@@ -134,13 +134,13 @@ public class ConnectTestsIT {
                 .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                 .build();
         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"))
-                .onComplete((ex, isSuccessful) -> {
+                .whenComplete((isSuccessful, ex) -> {
                     if(isSuccessful) {
                         csync.unauthenticate()
-                                .onComplete((ex2, isSuccessful2) -> {
+                                .whenComplete((isSuccessful2, ex2) -> {
                                     if(isSuccessful2) {
                                         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"))
-                                                .onComplete((ex3, isSuccessful3) -> {
+                                                .whenComplete((isSuccessful3, ex3) -> {
                                                     if(isSuccessful3) {
                                                         String uuid = UUID.randomUUID().toString();
                                                         try {
@@ -179,7 +179,7 @@ public class ConnectTestsIT {
                 .build();
         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"));
         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"))
-                .onComplete((ex, isSuccessful) -> {
+                .whenComplete((isSuccessful, ex) -> {
                     if(isSuccessful) {
                         future.complete(true);
                     }
@@ -198,11 +198,11 @@ public class ConnectTestsIT {
                 .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                 .build();
         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"))
-                .onComplete((ex, isSuccessful) -> {
+                .whenComplete((isSuccessful, ex) -> {
                     if(isSuccessful) {
                         csync.unauthenticate();
                         csync.unauthenticate()
-                                .onComplete((ex2, isSuccessful2) -> {
+                                .whenComplete((isSuccessful2, ex2) -> {
                                     if(isSuccessful2) {
                                         future.complete(true);
                                     }
@@ -226,10 +226,10 @@ public class ConnectTestsIT {
                 .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                 .build();
         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"))
-                .onComplete((ex, isSuccessful) -> {
+                .whenComplete((isSuccessful, ex) -> {
                     if(isSuccessful) {
                         csync.unauthenticate()
-                                .onComplete((ex2, isSuccessful2) -> {
+                                .whenComplete((isSuccessful2, ex2) -> {
                                     if(isSuccessful2) {
                                         try {
                                             String uuid = UUID.randomUUID().toString();
@@ -262,7 +262,7 @@ public class ConnectTestsIT {
                 .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                 .build();
         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"))
-            .onComplete((ex, isSuccessful) -> {
+            .whenComplete((isSuccessful, ex) -> {
                 if(isSuccessful) {
                     future.complete(true);
                 }
@@ -281,8 +281,8 @@ public class ConnectTestsIT {
                 .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                 .build();
         csync.authenticate("thisisafakeprovider", System.getenv("CSYNC_DEMO_TOKEN"))
-                .onComplete((ex, isSuccessful) -> {
-                    if(!isSuccessful) {
+                .whenComplete((isSuccessful, ex) -> {
+                    if(ex != null) {
                         future.complete(true);
                     }
                     else {
@@ -301,8 +301,8 @@ public class ConnectTestsIT {
                 .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                 .build();
         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), "thistokenshouldfail")
-                .onComplete((ex, isSuccessful) -> {
-                    if(!isSuccessful) {
+                .whenComplete((isSuccessful, ex) -> {
+                    if(ex != null) {
                         future.complete(true);
                     }
                     else {
@@ -321,8 +321,8 @@ public class ConnectTestsIT {
                 .build();
 
         csync.authenticate("facebook", "thisisafaketoken")
-                .onComplete((ex, isSuccessful) -> {
-                    if(!isSuccessful) {
+                .whenComplete((isSuccessful, ex) -> {
+                    if(ex != null) {
                         future.complete(true);
                     }
                     else {
@@ -341,8 +341,8 @@ public class ConnectTestsIT {
                 .build();
 
         csync.authenticate("google", "thisisafaketoken")
-                .onComplete((ex, isSuccessful) -> {
-                    if(!isSuccessful) {
+                .whenComplete((isSuccessful, ex) -> {
+                    if(ex != null) {
                         future.complete(true);
                     }
                     else {

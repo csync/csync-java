@@ -20,8 +20,9 @@ package com.ibm.csync.impl.commands;
 
 import com.ibm.csync.Deadline;
 import com.ibm.csync.Key;
-import com.ibm.csync.functional.Futur;
 import com.ibm.csync.impl.CSyncImpl;
+
+import java.util.concurrent.CompletableFuture;
 
 public class Advance {
 
@@ -45,7 +46,7 @@ public class Advance {
 		public Long maxvts;
 	}
 
-    public static Futur<Response> send(CSyncImpl csync, final Key pattern, final Long rvts, final Deadline dl) {
+    public static CompletableFuture<Response> send(CSyncImpl csync, final Key pattern, final Long rvts, final Deadline dl) {
         return csync.ws.rpc(
             "advance",
 			new Request(pattern.array,rvts),

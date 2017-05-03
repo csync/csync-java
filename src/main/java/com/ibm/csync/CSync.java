@@ -19,7 +19,6 @@
 package com.ibm.csync;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.ibm.csync.functional.Futur;
 import com.ibm.csync.impl.CSyncImpl;
 import com.ibm.csync.impl.commands.Pub;
 import okhttp3.ws.WebSocket;
@@ -30,9 +29,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.*;
 import java.util.UUID;
 
 public class CSync implements CSyncAPI {
@@ -55,7 +52,7 @@ public class CSync implements CSyncAPI {
 	// CSyncAPI
 
 	@Override
-	public Futur<Long> pub(final Key key, final String data, final Acl acl, final Deadline dl) {
+	public CompletableFuture<Long> pub(final Key key, final String data, final Acl acl, final Deadline dl) {
 		return Pub.send(impl, key, false, data, acl, dl);
 	}
 
@@ -65,7 +62,7 @@ public class CSync implements CSyncAPI {
 	}
 
 	@Override
-	public Futur<Long> del(final Key key, final Deadline dl) {
+	public CompletableFuture<Long> del(final Key key, final Deadline dl) {
 		return Pub.send(impl, key, true, null, null, dl);
 	}
 
@@ -74,12 +71,12 @@ public class CSync implements CSyncAPI {
 	// Auth
 	
 	@Override
-	public Futur<Boolean> authenticate(String provider, String token) {
+	public CompletableFuture<Boolean> authenticate(String provider, String token) {
 		return impl.ws.startSession(provider, token);
 	}
 
 	@Override
-	public Futur<Boolean> unauthenticate() {
+	public CompletableFuture<Boolean> unauthenticate() {
 		return impl.ws.endSession();
 	}
 
@@ -88,7 +85,7 @@ public class CSync implements CSyncAPI {
 	public final Blocking blocking = new Blocking() {
 		@Override
 		public Long pub(Key key, String data, final Acl acl, Deadline dl) throws Exception {
-			return CSync.this.pub(key,data,acl,dl).get(dl);
+			return CSync.this.pub(key,data,acl,dl).get(dl.ms, TimeUnit.MILLISECONDS);
 		}
 
 		@Override
@@ -98,7 +95,7 @@ public class CSync implements CSyncAPI {
 
 		@Override
 		public Long del(Key key, Deadline dl) throws Exception {
-			return CSync.this.del(key,dl).get(dl);
+			return CSync.this.del(key,dl).get(dl.ms, TimeUnit.MILLISECONDS);
 		}
 	};
 
