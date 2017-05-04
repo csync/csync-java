@@ -56,7 +56,6 @@ public class Transport implements WebSocketListener {
 	private final Executor sendExec = Executors.newSingleThreadExecutor();
 	private WebSocket loginWebSocket = null; //Needs to be stored so that we callback when we are sure auth succeeded
 	// TODO: handle concurrency
-	//private final Set<Callback<WebSocket>> waitingForSocket = ConcurrentHashMap.newKeySet();
 	private final Map<Long, CompletableFuture<Envelope>> waitingForResponse = Collections.synchronizedMap(new WeakHashMap<>());
 
 	private final Tracer tracer;

@@ -18,7 +18,6 @@
 
 import com.ibm.csync.Acls;
 import com.ibm.csync.CSync;
-import com.ibm.csync.Callback;
 import com.ibm.csync.Key;
 import com.ibm.csync.Timeout;
 import org.slf4j.Logger;
@@ -27,19 +26,17 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.util.Date;
 import java.util.concurrent.*;
+import java.util.function.BiConsumer;
 
 public class Main {
 
 	static private final Logger logger = LoggerFactory.getLogger(Main.class);
 
-	private static Callback<Object> print(final String msg) {
+	private static BiConsumer<Object, Exception> print(final String msg) {
 		return (e, v) -> logger.info("msg:[{}] err:[{}] result:[{}]", msg, e, v);
 	}
 
 	public static void main(String args[]) throws Exception {
-
-		//final Callback<Object> print = (e,v) -> logger.info("[{}] [{}]",e,v);
-
 
 		final CSync csync = CSync.builder()
 			.build();
