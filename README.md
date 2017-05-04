@@ -104,8 +104,8 @@ Note: Update the `host` and `port` to your specific csync server instance.
 ## Authenticating
 ```
 csync.authenticate("demo", "demoToken")
-    .onComplete((exception, didSucceed) -> {
-        if(didSucceed) {
+    .whenComplete((result, ex) -> {
+        if(ex == null) {
             //We successfully logged in
         }
         else {
@@ -186,14 +186,14 @@ Write to a key using futures without blocking.
 
 ```
 csync.pub("Key.Strin", "hello")
-    .then(() -> System.out.print("Success!"))
+    .thenRun(() -> System.out.print("Success!"))
 ```
 
 Delete a key using futures without blocking.
 
 ```
 csync.del("nice.key")
-    .then(() -> System.out.print("Success!"))
+    .thenRun(() -> System.out.print("Success!"))
 ```
 
 # License
