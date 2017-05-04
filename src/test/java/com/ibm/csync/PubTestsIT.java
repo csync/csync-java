@@ -41,7 +41,7 @@ public class PubTestsIT {
                 .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                 .build();
         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"))
-                .whenComplete((isSuccessful, ex) -> {
+                .whenComplete((result, ex) -> {
                     if(ex == null) {
                         future.complete(true);
                     }

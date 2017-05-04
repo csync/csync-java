@@ -34,7 +34,7 @@ public class Unsub {
 		}
 	}
 
-	public static CompletableFuture<Boolean> send(final CSyncImpl impl, final Key key, final Deadline dl)  {
+	public static CompletableFuture<Void> send(final CSyncImpl impl, final Key key, final Deadline dl)  {
 		return impl.ws.rpc("unsub",new Request(key.array),Happy.Response.class, dl)
 			.thenApply(h -> {
 				try {
@@ -42,7 +42,7 @@ public class Unsub {
 				} catch (ServerException e) {
 					throw new RuntimeException(e);
 				}
-				return true;
+				return null;
 			});
 	}
 }

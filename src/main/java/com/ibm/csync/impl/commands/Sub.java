@@ -35,7 +35,7 @@ public class Sub {
 		}
 	}
 
-	public static CompletableFuture<Boolean> send(final CSyncImpl csync, final Key key, final Deadline dl)  {
+	public static CompletableFuture<Void> send(final CSyncImpl csync, final Key key, final Deadline dl)  {
 		return csync.ws.rpc("sub",new Request(key.array),Happy.Response.class, dl)
 			.thenApply(h -> {
 				try {
@@ -43,7 +43,7 @@ public class Sub {
 				} catch (ServerException e) {
 					throw new RuntimeException(e);
 				}
-				return true;
+				return null;
 			});
 	}
 }

@@ -71,12 +71,12 @@ public class CSync implements CSyncAPI {
 	// Auth
 	
 	@Override
-	public CompletableFuture<Boolean> authenticate(String provider, String token) {
+	public CompletableFuture<Void> authenticate(String provider, String token) {
 		return impl.ws.startSession(provider, token);
 	}
 
 	@Override
-	public CompletableFuture<Boolean> unauthenticate() {
+	public CompletableFuture<Void> unauthenticate() {
 		return impl.ws.endSession();
 	}
 

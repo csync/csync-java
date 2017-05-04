@@ -52,7 +52,7 @@ public class Transport implements WebSocketListener {
 	private final static Logger logger = LoggerFactory.getLogger(Transport.class);
 
 	private CompletableFuture<WebSocket> socketFuture = null;
-	private CompletableFuture<Boolean> finshedClosing = null;
+	private CompletableFuture<Void> finshedClosing = null;
 	private final Executor sendExec = Executors.newSingleThreadExecutor();
 	private WebSocket loginWebSocket = null; //Needs to be stored so that we callback when we are sure auth succeeded
 	// TODO: handle concurrency
@@ -84,13 +84,13 @@ public class Transport implements WebSocketListener {
 
 	}
 
-	public synchronized CompletableFuture<Boolean> startSession(String provider, String token) {
+	public synchronized CompletableFuture<Void> startSession(String provider, String token) {
 		String authURL = this.req.url().toString() + encodeAuthParameters(provider, token);
-		CompletableFuture<Boolean>  sessionPromise = new CompletableFuture<>();
+		CompletableFuture<Void>  sessionPromise = new CompletableFuture<>();
 		if(socketFuture != null) {
 			// Already logged in
 			logger.warn("Start session called while the session is already active");
-			sessionPromise.complete(true);
+			sessionPromise.complete(null);
 		}
 		else {
 			connect(authURL)
@@ -99,7 +99,7 @@ public class Transport implements WebSocketListener {
 									sessionPromise.completeExceptionally(ex);
 								}
 								else {
-									sessionPromise.complete(true);
+									sessionPromise.complete(null);
 								}
 							}
 						, workers
@@ -109,11 +109,11 @@ public class Transport implements WebSocketListener {
 		return sessionPromise;
 	}
 
-	public synchronized CompletableFuture<Boolean> endSession() {
+	public synchronized CompletableFuture<Void> endSession() {
 		if(socketFuture == null) {
 			// Already logged out
 			logger.warn("End session called while the session is already not active");
-			return CompletableFuture.completedFuture(true);
+			return CompletableFuture.completedFuture(null);
 		}
 		else {
 			if(finshedClosing != null) {
@@ -272,7 +272,7 @@ public class Transport implements WebSocketListener {
 			theFuture.completeExceptionally(new Exception(reason));
 		}
 		if (finshedClosing != null) {
-			finshedClosing.complete(true);
+			finshedClosing.complete(null);
 		}
 	}
 }

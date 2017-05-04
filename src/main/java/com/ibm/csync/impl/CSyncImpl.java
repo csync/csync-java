@@ -173,7 +173,7 @@ public class CSyncImpl {
 		if (needToSchedule) {
 			// Send the Sub request. No need to wait for a reply except for error reporting
 			Sub.send(this, pattern, dl)
-				.exceptionally(e -> {tracer.onError(e,"sub %s",pattern.string); return true;});
+				.exceptionally(e -> {tracer.onError(e,"sub %s",pattern.string); return null;});
 
 
 			// TODO: listen / close / listen => 2 advances

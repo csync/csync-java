@@ -27,8 +27,8 @@ import java.util.function.BiConsumer;
 
 interface CSyncAPI {
 
-	CompletableFuture<Boolean> authenticate(String provider, String token);
-	CompletableFuture<Boolean> unauthenticate();
+	CompletableFuture<Void> authenticate(String provider, String token);
+	CompletableFuture<Void> unauthenticate();
 	CompletableFuture<Long> pub(Key key, String data, Acl acl, Deadline dl);
 	CompletableFuture<Long> del(final Key key, final Deadline dl);
 	Timeout defaultTimeout();
