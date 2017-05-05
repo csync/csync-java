@@ -83,7 +83,7 @@ public class Subscription implements Closeable {
 			final int nBeforeRemove = cSync.activePatterns.remove(pattern, 1);
 			if (nBeforeRemove <= 1) {
 				Unsub.send(cSync,pattern, Deadline.of(Timeout.of(10000)))
-					.onComplete((e,v) -> System.out.printf("*************** unsub e:%s v:%s\n",e,v)); // TODO:
+					.whenComplete((v,e) -> System.out.printf("*************** unsub e:%s v:%s\n",e,v)); // TODO:
 			}
 			// TODO: send unsub
 		}

@@ -41,7 +41,7 @@ public class PubTestsIT {
                 .port(Integer.parseInt(System.getenv("CSYNC_PORT")))
                 .build();
         csync.authenticate(System.getenv("CSYNC_DEMO_PROVIDER"), System.getenv("CSYNC_DEMO_TOKEN"))
-                .onComplete((ex, isSuccessful) -> {
+                .whenComplete((result, ex) -> {
                     if(ex == null) {
                         future.complete(true);
                     }
@@ -84,7 +84,7 @@ public class PubTestsIT {
         String uuid = UUID.randomUUID().toString();
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         try {
-            csync.pub("tests.java."+uuid+".a.b.c","abc", (error, vts) -> {
+            csync.pub("tests.java."+uuid+".a.b.c","abc", (vts, error) -> {
                     if (error == null && vts > 0)
                         future.complete(true);
                 }

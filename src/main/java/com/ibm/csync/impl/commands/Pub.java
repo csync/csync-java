@@ -21,9 +21,11 @@ package com.ibm.csync.impl.commands;
 import com.ibm.csync.Acl;
 import com.ibm.csync.Deadline;
 import com.ibm.csync.Key;
-import com.ibm.csync.functional.Futur;
+import com.ibm.csync.ServerException;
 import com.ibm.csync.impl.CSyncImpl;
 import com.ibm.csync.impl.CTS;
+
+import java.util.concurrent.CompletableFuture;
 
 public class Pub {
 
@@ -44,15 +46,21 @@ public class Pub {
 		}
 	}
 
-    public static Futur<Long> send(final CSyncImpl impl,
-								   final Key key,
-								   final Boolean deletePath,
-								   final String data,
-								   final Acl acl,
-								   final Deadline dl) {
+    public static CompletableFuture<Long> send(final CSyncImpl impl,
+											   final Key key,
+											   final Boolean deletePath,
+											   final String data,
+											   final Acl acl,
+											   final Deadline dl) {
 		final Request pub = new Request(key.array, deletePath, data, Acl.id(acl));
 
 		return impl.ws.rpc("pub",pub,Happy.Response.class,dl)
-			.map(h -> h.check().vts);
+			.thenApply(h -> {
+				try {
+					return h.check().vts;
+				} catch (ServerException e) {
+					throw new RuntimeException(e);
+				}
+			});
 	}
 }

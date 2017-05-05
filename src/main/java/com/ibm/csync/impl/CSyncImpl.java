@@ -106,9 +106,9 @@ public class CSyncImpl {
 		try {
 			final Deadline deadline = Deadline.of(advanceTimeout);
 			final long rvts = db.rvtsForPattern(pattern);
-			final Advance.Response adv2res = Advance.send(this, pattern, rvts, deadline).get(deadline);
+			final Advance.Response adv2res = Advance.send(this, pattern, rvts, deadline).get(deadline.ms, TimeUnit.MILLISECONDS);
 			final List<Long> toFetch = db.shouldFetchVts(adv2res.vts);
-			final Data.Response[] fetchResponse = Fetch.send(this, toFetch, deadline).get(deadline);
+			final Data.Response[] fetchResponse = Fetch.send(this, toFetch, deadline).get(deadline.ms, TimeUnit.MILLISECONDS);
 
 			for (final Data.Response d : fetchResponse) {
 				db.set(Value.of(d));
@@ -173,7 +173,7 @@ public class CSyncImpl {
 		if (needToSchedule) {
 			// Send the Sub request. No need to wait for a reply except for error reporting
 			Sub.send(this, pattern, dl)
-				.onError(e -> tracer.onError(e,"sub %s",pattern.string));
+				.exceptionally(e -> {tracer.onError(e,"sub %s",pattern.string); return null;});
 
 
 			// TODO: listen / close / listen => 2 advances

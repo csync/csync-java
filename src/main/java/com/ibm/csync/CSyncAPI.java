@@ -18,65 +18,66 @@
 
 package com.ibm.csync;
 
-import com.ibm.csync.functional.Futur;
 import okhttp3.ws.WebSocket;
 
 import java.io.IOError;
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
 interface CSyncAPI {
 
-	Futur<Boolean> authenticate(String provider, String token);
-	Futur<Boolean> unauthenticate();
-	Futur<Long> pub(Key key, String data, Acl acl, Deadline dl);
-	Futur<Long> del(final Key key, final Deadline dl);
+	CompletableFuture<Void> authenticate(String provider, String token);
+	CompletableFuture<Void> unauthenticate();
+	CompletableFuture<Long> pub(Key key, String data, Acl acl, Deadline dl);
+	CompletableFuture<Long> del(final Key key, final Deadline dl);
 	Timeout defaultTimeout();
 
 	/////////
 	// Pub //
 	/////////
 
-	default Futur<Long> pub(final String key, final String data, final Acl acl, final Deadline dl) {
+	default CompletableFuture<Long> pub(final String key, final String data, final Acl acl, final Deadline dl) {
 		return pub(Key.of(key),data,acl,dl);
 	}
 
-	default Futur<Long> pub(final Key key, final String data, final Acl acl, final Timeout to) {
+	default CompletableFuture<Long> pub(final Key key, final String data, final Acl acl, final Timeout to) {
 		return pub(key,data,acl,Deadline.of(to));
 	}
 
-	default Futur<Long> pub(final String key, final String data, final Acl acl, final Timeout to) {
+	default CompletableFuture<Long> pub(final String key, final String data, final Acl acl, final Timeout to) {
 		return pub(Key.of(key),data,acl, to);
 	}
 
-	default Futur<Long> pub(final Key key, final String data, final Acl acl) {
+	default CompletableFuture<Long> pub(final Key key, final String data, final Acl acl) {
 		return pub(key,data,acl,defaultTimeout());
 	}
 
-	default Futur<Long> pub(final String key, final String data, final Acl acl) {
+	default CompletableFuture<Long> pub(final String key, final String data, final Acl acl) {
 		return pub(Key.of(key),data,acl);
 	}
 
-	default Futur<Long> pub(final Key key, final String data, final Deadline dl) {
+	default CompletableFuture<Long> pub(final Key key, final String data, final Deadline dl) {
 		return pub(key,data,null,dl);
 	}
 
-	default Futur<Long> pub(final String key, final String data, final Deadline dl) {
+	default CompletableFuture<Long> pub(final String key, final String data, final Deadline dl) {
 		return pub(Key.of(key),data,dl);
 	}
 
-	default Futur<Long> pub(final Key key, final String data, final Timeout to) {
+	default CompletableFuture<Long> pub(final Key key, final String data, final Timeout to) {
 		return pub(key,data,Deadline.of(to));
 	}
 
-	default Futur<Long> pub(final String key, final String data, final Timeout to) {
+	default CompletableFuture<Long> pub(final String key, final String data, final Timeout to) {
 		return pub(Key.of(key),data, to);
 	}
 
-	default Futur<Long> pub(final Key key, final String data) {
+	default CompletableFuture<Long> pub(final Key key, final String data) {
 		return pub(key,data,(Acl)null);
 	}
 
-	default Futur<Long> pub(final String key, final String data) {
+	default CompletableFuture<Long> pub(final String key, final String data) {
 		return pub(Key.of(key),data);
 	}
 
@@ -84,23 +85,23 @@ interface CSyncAPI {
 	// del //
 	/////////
 
-	default Futur<Long> del(final String key, final Deadline dl) {
+	default CompletableFuture<Long> del(final String key, final Deadline dl) {
 		return del(Key.of(key),dl);
 	}
 
-	default Futur<Long> del(final Key key, final Timeout to) {
+	default CompletableFuture<Long> del(final Key key, final Timeout to) {
 		return del(key,Deadline.of(to));
 	}
 
-	default Futur<Long> del(final String key, final Timeout to) {
+	default CompletableFuture<Long> del(final String key, final Timeout to) {
 		return del(Key.of(key),to);
 	}
 
-	default Futur<Long> del(final Key key) {
+	default CompletableFuture<Long> del(final Key key) {
 		return del(key, defaultTimeout());
 	}
 
-	default Futur<Long> del(final String key) {
+	default CompletableFuture<Long> del(final String key) {
 		return del(Key.of(key));
 	}
 
@@ -110,78 +111,78 @@ interface CSyncAPI {
 
 	// Callback API
 
-	default void pub(final Key key, final String data, final Acl acl, final Deadline dl, Callback<? super Long> cb) {
-		pub(key, data, acl, dl).onComplete(cb);
+	default void pub(final Key key, final String data, final Acl acl, final Deadline dl, BiConsumer<? super Long, ? super Throwable> cb) {
+		pub(key, data, acl, dl).whenComplete(cb);
 	}
 
-	default void pub(final String key, final String data, final Acl acl, final Deadline dl, Callback<? super Long> cb) {
-		pub(key,data,acl,dl).onComplete(cb);
+	default void pub(final String key, final String data, final Acl acl, final Deadline dl, BiConsumer<? super Long, ? super Throwable> cb) {
+		pub(key,data,acl,dl).whenComplete(cb);
 	}
 
-	default void pub(final Key key, final String data, final Acl acl, final Timeout to, Callback<? super Long> cb) {
-		pub(key,data,acl,to).onComplete(cb);
+	default void pub(final Key key, final String data, final Acl acl, final Timeout to, BiConsumer<? super Long, ? super Throwable> cb) {
+		pub(key,data,acl,to).whenComplete(cb);
 	}
 
-	default void pub(final String key, final String data, final Acl acl, final Timeout to, Callback<? super Long> cb) {
-		pub(key,data,acl,to).onComplete(cb);
+	default void pub(final String key, final String data, final Acl acl, final Timeout to, BiConsumer<? super Long, ? super Throwable> cb) {
+		pub(key,data,acl,to).whenComplete(cb);
 	}
 
-	default void pub(final Key key, final String data, final Acl acl, Callback<? super Long> cb) {
-		pub(key,data,acl).onComplete(cb);
+	default void pub(final Key key, final String data, final Acl acl, BiConsumer<? super Long, ? super Throwable> cb) {
+		pub(key,data,acl).whenComplete(cb);
 	}
 
-	default void pub(final String key, final String data, final Acl acl, Callback<? super Long> cb) {
-		pub(key, data, acl).onComplete(cb);
+	default void pub(final String key, final String data, final Acl acl, BiConsumer<? super Long, ? super Throwable> cb) {
+		pub(key, data, acl).whenComplete(cb);
 	}
 
 
-	default void pub(final Key key, final String data, final Deadline dl, Callback<? super Long> cb) {
+	default void pub(final Key key, final String data, final Deadline dl, BiConsumer<? super Long, ? super Throwable> cb) {
 		pub(key, data, null, dl, cb);
 	}
 
-	default void pub(final String key, final String data, final Deadline dl, Callback<? super Long> cb) {
-		pub(key,data,dl).onComplete(cb);
+	default void pub(final String key, final String data, final Deadline dl, BiConsumer<? super Long, ? super Throwable> cb) {
+		pub(key,data,dl).whenComplete(cb);
 	}
 
-	default void pub(final Key key, final String data, final Timeout to, Callback<? super Long> cb) {
-		pub(key,data,to).onComplete(cb);
+	default void pub(final Key key, final String data, final Timeout to, BiConsumer<? super Long, ? super Throwable> cb) {
+		pub(key,data,to).whenComplete(cb);
 	}
 
-	default void pub(final String key, final String data, final Timeout to, Callback<? super Long> cb) {
-		pub(key,data,to).onComplete(cb);
+	default void pub(final String key, final String data, final Timeout to, BiConsumer<? super Long, ? super Throwable> cb) {
+		pub(key,data,to).whenComplete(cb);
 	}
 
-	default void pub(final Key key, final String data, Callback<? super Long> cb) {
-		pub(key,data).onComplete(cb);
+	default void pub(final Key key, final String data, BiConsumer<? super Long, ? super Throwable> cb) {
+		pub(key,data).whenComplete(cb);
 	}
 
-	default void pub(final String key, final String data, Callback<? super Long> cb) {
-		pub(key, data).onComplete(cb);
+	default void pub(final String key, final String data, BiConsumer<? super Long, ? super Throwable> cb) {
+		pub(key, data).whenComplete(cb);
 	}
 
 	// del
 
-	default void del(final Key key, final Deadline dl, Callback<? super Long> cb) {
-		del(key,dl).onComplete(cb);
+	default void del(final Key key, final Deadline dl, BiConsumer<? super Long, ? super Throwable> cb) {
+		del(key,dl).whenComplete(cb);
 	}
 
-	default void del(final String key, final Deadline dl, Callback<? super Long> cb) {
-		del(key,dl).onComplete(cb);
+	default void del(final String key, final Deadline dl, BiConsumer<? super Long, ? super Throwable> cb) {
+		del(key,dl).whenComplete(cb);
 	}
 
-	default void del(final Key key, final Timeout to, Callback<? super Long> cb) {
-		del(key,to).onComplete(cb);
+	default void del(final Key key, final Timeout to, BiConsumer<? super Long, ? super Throwable> cb) {
+		del(key,to).whenComplete(cb);
 	}
 
-	default void del(final String key, final Timeout to, Callback<? super Long> cb) {
-		del(key,to).onComplete(cb);
+	default void del(final String key, final Timeout to, BiConsumer<? super Long, ? super Throwable> cb) {
+		del(key,to).whenComplete(cb);
 	}
 
-	default void del(final Key key, Callback<? super Long> cb) {
-		del(key).onComplete(cb);
+	default void del(final Key key, BiConsumer<? super Long, ? super Throwable> cb) {
+		del(key).whenComplete(cb);
 	}
 
-	default void del(final String key, Callback<? super Long> cb) {
-		del(key).onComplete(cb);
+	default void del(final String key, BiConsumer<? super Long, ? super Throwable> cb) {
+		del(key).whenComplete(cb);
 	}
 }

@@ -18,7 +18,6 @@
 
 import com.ibm.csync.Acls;
 import com.ibm.csync.CSync;
-import com.ibm.csync.Callback;
 import com.ibm.csync.Key;
 import com.ibm.csync.Timeout;
 import org.slf4j.Logger;
@@ -27,27 +26,25 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.util.Date;
 import java.util.concurrent.*;
+import java.util.function.BiConsumer;
 
 public class Main {
 
 	static private final Logger logger = LoggerFactory.getLogger(Main.class);
 
-	private static Callback<Object> print(final String msg) {
+	private static BiConsumer<Object, Exception> print(final String msg) {
 		return (e, v) -> logger.info("msg:[{}] err:[{}] result:[{}]", msg, e, v);
 	}
 
 	public static void main(String args[]) throws Exception {
-
-		//final Callback<Object> print = (e,v) -> logger.info("[{}] [{}]",e,v);
-
 
 		final CSync csync = CSync.builder()
 			.build();
 		csync.authenticate("demo", "demoToken");
 
 		csync.pub("something", "hello", Acls.Private)
-			.then(() -> csync.pub("something", "hello again", Acls.PublicRead))
-			.onComplete(print("something public"));
+			.thenApply((vts) -> csync.pub("something", "hello again", Acls.PublicRead))
+			.whenComplete((vts, e) -> print("something public"));
 
 		final Closeable all = csync
 			.listen(
@@ -56,12 +53,12 @@ public class Main {
 
 		logger.info("pub vts {}", csync.blocking.pub("x.y.z", "nice"));
 
-		csync.del("x.y.z", Timeout.of(10000), print("delete x.y.z"));
+		csync.del("x.y.z", Timeout.of(10000), (vts, ex) -> print("delete x.y.z"));
 		csync.pub(Key.of("a", "b"), "xyz");
 
 		csync.pub("nice.key", "hello")
-			.then(() -> csync.del("nice.key"))
-			.onComplete(print("pub nice.key:hello"));
+			.thenApply((vts) -> csync.del("nice.key"))
+			.whenComplete((vts, ex) -> print("pub nice.key:hello"));
 
 		final CountDownLatch waitForThree = new CountDownLatch(3);
 
@@ -103,7 +100,7 @@ public class Main {
 
 		csync
 			.pub("a.b.c", "abc")
-			.onComplete(print("pub a.b.c"));
+			.whenComplete((vts, ex) -> print("pub a.b.c"));
 
 		// Callback API
 
@@ -134,7 +131,7 @@ public class Main {
 				logger.info("pub");
 				csync
 					.pub("done.in.loop", new Date().toString())
-					.onComplete(print("loop"));
+					.whenComplete((vts,ex) -> print("loop"));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

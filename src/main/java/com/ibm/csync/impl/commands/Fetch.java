@@ -19,10 +19,10 @@
 package com.ibm.csync.impl.commands;
 
 import com.ibm.csync.Deadline;
-import com.ibm.csync.functional.Futur;
 import com.ibm.csync.impl.CSyncImpl;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class Fetch {
 
@@ -41,14 +41,14 @@ public class Fetch {
 		public Data.Response[] response;
 	}
 
-    public static Futur<Data.Response[]> send(final CSyncImpl csync, final List<Long> vts, final Deadline dl) {
+    public static CompletableFuture<Data.Response[]> send(final CSyncImpl csync, final List<Long> vts, final Deadline dl) {
 		if (vts.size() == 0) {
-			return Futur.success(new Data.Response[0]);
+			return CompletableFuture.completedFuture(new Data.Response[0]);
 		} else {
 			return csync.ws.rpc(
 				"fetch",
 				new Request(vts),
-				Response.class,dl).map(r -> r.response);
+				Response.class,dl).thenApply(r -> r.response);
 		}
     }
 
